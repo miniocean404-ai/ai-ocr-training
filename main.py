@@ -69,7 +69,8 @@ class SimpleNN(nn.Module):  # 定义一个简单的神经网络类
             64, 10
         )  # 隐藏层 2 -> 输出层 ：64 个输入 -> 10 个输出（0-9 数字）
 
-    def forward(self, x):  # 定义前向传播过程
+    # 定义前向传播过程，(个人理解用于计算概率)
+    def forward(self, x):
         x = x.view(-1, 28 * 28)  # 将 28x28 的图片展平成 784 个数字的一维数组
         """
         ReLU（Rectified Linear Unit，修正线性单元）
@@ -154,6 +155,7 @@ for epoch in range(epochs):  # 循环训练 5 轮
         outputs = model(images)  # 将图片输入模型得到预测
         loss = criterion(outputs, labels)  # 计算预测与真实标签的损失
 
+        # 反向传播过程，(用于根据损失函数计算自己定义的神经网络在什么梯度下可以识别出来)
         """
         # 反向传播计算梯度（Backward）的作用
         反向传播是深度学习的核心算法，用于计算损失函数相对于网络中每个参数的梯度（偏导数）
