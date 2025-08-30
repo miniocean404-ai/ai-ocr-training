@@ -55,15 +55,17 @@ test_loader = torch.utils.data.DataLoader(
 class SimpleNN(nn.Module):  # 定义一个简单的神经网络类
     def __init__(self):  # 初始化函数
         super(SimpleNN, self).__init__()  # 调用父类初始化
-        self.fc1 = nn.Linear(28 * 28, 128)  # 第一层：784个输入->128个输出
-        self.fc2 = nn.Linear(128, 64)  # 第二层：128个输入->64个输出
-        self.fc3 = nn.Linear(64, 10)  # 第三层：64个输入->10个输出（0-9数字）
+        self.fc1 = nn.Linear(28 * 28, 128)  # 输入层 -> 隐藏层1 : 784个输入 -> 128个输出
+        self.fc2 = nn.Linear(128, 64)  # 隐藏层1 -> 隐藏层2 ：128个输入 -> 64个输出
+        self.fc3 = nn.Linear(
+            64, 10
+        )  # 隐藏层2 -> 输出层 ：64个输入 -> 10个输出（0-9数字）
 
     def forward(self, x):  # 定义前向传播过程
-        x = x.view(-1, 28 * 28)  # 将28x28的图片展平成784个数字的一维数组
+        x = x.view(-1, 28 * 28)  # 将 28x28 的图片展平成 784 个数字的一维数组
         x = torch.relu(self.fc1(x))  # 通过第一层并应用ReLU激活函数
         x = torch.relu(self.fc2(x))  # 通过第二层并应用ReLU激活函数
-        x = self.fc3(x)  # 通过第三层（输出层，不加激活函数）
+        x = self.fc3(x)  # 通过第三层（输出层，不加激活函数）不加 softmax 交叉熵会自动做
         return x  # 返回预测结果
 
 
@@ -74,24 +76,27 @@ model = SimpleNN()  # 创建模型实例
 """
 
 
-def show_random_predictions(model, data_set):  # 定义显示随机预测的函数
+def show_random_predictions(
+    model: SimpleNN, data_set: torchvision.datasets.MNIST
+):  # 定义显示随机预测的函数
     model.eval()  # 将模型设置为评估模式（不训练）
-    fig, axes = plt.subplots(1, 5, figsize=(10, 2))  # 创建1行5列的图表
-    for i in range(5):  # 循环5次，预测5张图片
-        idx = random.randint(0, len(data_set) - 1)  # 随机选择一个图片索引
+    fig, axes = plt.subplots(1, 5, figsize=(10, 2))  # 创建 1 行 5 列的 ui 图表
+    for i in range(5):
+        idx = random.randint(0, len(data_set) - 1)
         image, label = data_set[idx]  # 获取图片和真实标签
         with torch.no_grad():  # 不计算梯度（节省内存）
             output = model(image.unsqueeze(0))  # 将图片输入模型获得预测
             pred = torch.argmax(output, dim=1).item()  # 找到概率最大的类别
-        axes[i].imshow(image.squeeze(), cmap="gray")  # 显示灰度图片
-        axes[i].set_title(f"Predicted: {pred}")  # 设置标题显示预测结果
+        axes[i].imshow(image.squeeze(), cmap="gray")  # 显示 UI 灰度图片
+        axes[i].set_title(f"Predicted: {pred}")  # 设置 UI 标题显示预测结果
         axes[i].axis("off")  # 隐藏坐标轴
 
-    plt.show()  # 显示图表
+    # 显示 UI 图表
+    plt.show()
 
 
-print("随机预测五张图片")  # 打印提示信息
-show_random_predictions(model, test_dataset)  # 调用函数显示预测结果
+print("随机预测五张图片")
+show_random_predictions(model, test_dataset)
 
 """
 4. 训练模型
@@ -102,14 +107,14 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.01)  # 定义优化器（�
 epochs = 5  # 设置训练轮数为5轮
 for epoch in range(epochs):  # 循环训练5轮
     running_loss = 0.0  # 初始化累计损失
-    for i, (images, labels) in enumerate(train_loader):  # 遍历训练数据
+    for i, (images, labels) in enumerate(train_loader):
         optimizer.zero_grad()  # 清零梯度
         outputs = model(images)  # 将图片输入模型得到预测
         loss = criterion(outputs, labels)  # 计算预测与真实标签的损失
         loss.backward()  # 反向传播计算梯度
         optimizer.step()  # 更新模型参数
         running_loss += loss.item()  # 累加损失值
-    # 打印每轮的损失信息
+
     print(
         f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item():.4f} loss2: {running_loss / len(train_loader):.4f}"
     )
@@ -118,12 +123,12 @@ for epoch in range(epochs):  # 循环训练5轮
 """
 5. 用训练后的模型权重再次预测
 """
-print("随机预测五张图片")  # 打印提示信息
-show_random_predictions(model, test_dataset)  # 再次显示预测结果
+print("随机预测五张图片")
+show_random_predictions(model, test_dataset)
 
 # debugger 时候可以查看模型权重, 可以打印参数: model.fc1.weight、model.fc2.weight、model.fc3.weight
 # 保存模型权重为 bin 文件
-torch.save(model.state_dict(), "simple.bin")  # 保存训练好的模型参数到文件
+torch.save(model.state_dict(), "simple.bin")
 
 
 # """
