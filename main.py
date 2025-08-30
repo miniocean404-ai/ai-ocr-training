@@ -101,7 +101,9 @@ class SimpleNN(nn.Module):  # 定义一个简单的神经网络类
         """
         x = torch.relu(self.fc1(x))  # 通过第一层输入层并应用 ReLU 激活函数
         x = torch.relu(self.fc2(x))  # 通过第二层隐藏层并应用 ReLU 激活函数
-        x = self.fc3(x)  # 通过第三层（输出层，不加激活函数）不加 softmax 交叉熵会自动做
+        x = self.fc3(
+            x
+        )  # 通过第三层（输出层，不加激活函数）不加 softmax 交叉熵 CrossEntropyLoss 会自动做
         return x  # 返回预测结果
 
 
@@ -121,8 +123,12 @@ def show_random_predictions(
         idx = random.randint(0, len(data_set) - 1)
         image, label = data_set[idx]  # 获取图片和真实标签
         with torch.no_grad():  # 不计算梯度（节省内存）
-            output = model(image.unsqueeze(0))  # 将图片输入模型获得预测
-            pred = torch.argmax(output, dim=1).item()  # 找到概率最大的类别
+            # 将图片输入模型获得预测,
+            # unsqueeze 用于将二维数组图数据 [[1, 2], [3, 4]] 片转化为四维数组 [[[1, 2], [3, 4]]], 之前：[高度, 宽度, 通道数] -> [224, 224, 3] (这是一张图片)，之后：[批次大小, 高度, 宽度, 通道数] -> [1, 224, 224, 3] (这是一个包含一张图片的批次)
+            # unsqueeze 参数代表在哪个梯度进行扩展dim=0: 在最前面加维度、dim=1: 在原来的第0维和第1维之间加维度、dim=-1: 在最后面加维度（非常常用）
+            output = model(image.unsqueeze(0))
+            pred = torch.argmax(output, dim=1).item()  # 找到概率最大的类别的索引的值
+
         axes[i].imshow(image.squeeze(), cmap="gray")  # 显示 UI 灰度图片
         axes[i].set_title(f"Predicted: {pred}")  # 设置 UI 标题显示预测结果
         axes[i].axis("off")  # 隐藏坐标轴
@@ -144,11 +150,45 @@ epochs = 5  # 设置训练轮数为 5 轮
 for epoch in range(epochs):  # 循环训练 5 轮
     running_loss = 0.0  # 初始化累计损失
     for i, (images, labels) in enumerate(train_loader):
-        optimizer.zero_grad()  # 清零梯度
+        optimizer.zero_grad()  # 清除上一次迭代的梯度，确保每次迭代使用的是当前批次的梯度
         outputs = model(images)  # 将图片输入模型得到预测
         loss = criterion(outputs, labels)  # 计算预测与真实标签的损失
-        loss.backward()  # 反向传播计算梯度
-        optimizer.step()  # 更新模型参数
+
+        """
+        # 反向传播计算梯度（Backward）的作用
+        反向传播是深度学习的核心算法，用于计算损失函数相对于网络中每个参数的梯度（偏导数）
+        ## 为什么需要梯度
+        ### 梯度的含义：
+        1. 梯度告诉我们：如果稍微改变某个参数，损失函数会如何变化
+        2. 梯度的方向指向损失函数增长最快的方向
+        3. 梯度的大小表示损失函数变化的速率
+        ### 参数更新的依据：
+        1. 我们想要减小损失，所以要朝梯度的反方向更新参数
+        2. 这就是梯度下降算法的基本思想
+
+        # 前向传播（计算预测）
+        输入图像 → fc1 → ReLU → fc2 → ReLU → fc3 → 输出预测
+        # 反向传播（计算梯度）
+        损失函数 ← ∂L/∂fc3 ← ∂L/∂fc2 ← ∂L/∂fc1 ← 梯度传播
+
+        ## 具体的计算过程
+        反向传播使用链式法则计算复合函数的导数：∂Loss/∂fc1_weight = ∂Loss/∂output × ∂output/∂fc3 × ∂fc3/∂fc2 × ∂fc2/∂fc1 × ∂fc1/∂fc1_weight
+        逐层计算：
+        1. 输出层：计算损失相对于输出层参数的梯度
+        2. 隐藏层2：利用输出层的梯度，计算隐藏层2参数的梯度
+        3. 隐藏层1：利用隐藏层2的梯度，计算隐藏层1参数的梯度
+
+        loss.backward()  # 计算所有参数的梯度
+        自动计算：
+        - model.fc1.weight.grad  # fc1权重的梯度
+        - model.fc1.bias.grad    # fc1偏置的梯度
+        - model.fc2.weight.grad  # fc2权重的梯度
+        - model.fc2.bias.grad    # fc2偏置的梯度
+        - model.fc3.weight.grad  # fc3权重的梯度
+        - model.fc3.bias.grad    # fc3偏置的梯度
+        """
+        loss.backward()
+        optimizer.step()  # 使用梯度更新参数
         running_loss += loss.item()  # 累加损失值
 
     print(
