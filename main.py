@@ -54,6 +54,11 @@ test_loader = torch.utils.data.DataLoader(
 """
 
 
+# 创建一个SimpleNN这样的神经网络时，所有权重和偏置参数在初始化时都是随机的
+# 参数初始化：nn.Linear层的权重和偏置在创建时会被随机初始化（使用PyTorch的默认初始化策略）
+# 梯度状态：在第一次前向传播之前，所有参数的.grad属性都是None，只有在调用.backward()计算梯度后，梯度才会被计算并存储
+# 预测是由模型的参数（权重和偏置）通过前向传播计算得到的
+# 梯度值的主要作用是为了优化模型参数，而不是直接用于预测，梯度告诉我们如何调整参数以使预测更准确
 class SimpleNN(nn.Module):  # 定义一个简单的神经网络类
     fc1: nn.Linear
     fc2: nn.Linear
